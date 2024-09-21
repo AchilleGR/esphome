@@ -62,7 +62,7 @@ void UnipiGPIOPin::setup() {
 }
 
 std::string UnipiGPIOPin::dump_summary() const {
-  return str_sprintf("%u.%u via Unipi", 1, this->pin_);
+  return str_sprintf("%u.%u via Unipi", this->slot_, this->pin_);
 }
 
 bool UnipiGPIOPin::digital_read() {
