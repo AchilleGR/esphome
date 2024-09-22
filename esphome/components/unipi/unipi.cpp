@@ -35,25 +35,27 @@ void UnipiComponent::dump_config() {
 }
 
 void UnipiGPIOPin::setup() {
-  std::string type;
-  std::string filename;
+  std::string type, filename, fmode;
 
   switch (this->mode_) {
     case IoMode::DI:
       type = "DI";
+      fmode = "r";
       break;
     case IoMode::DO:
       type = "DO";
+      fmode = "r+";
       break;
     case IoMode::RO:
       type = "RO";
+      fmode = "r+";
       break;
   }
 
   filename = str_sprintf("%s/%s%u.%u/value", UNIPI_PLC, type.c_str(), this->slot_, this->pin_);
 
   ESP_LOGD(TAG, "Opening... %s", filename.c_str());
-  this->fp_ = fopen(filename.c_str(), "r+");
+  this->fp_ = fopen(filename.c_str(), fmode.c_str());
   if (!this->fp_) {
     ESP_LOGE(TAG, "Could not open %s", filename.c_str());
     this->parent_->status_set_warning("non-existent pin");
