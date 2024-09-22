@@ -61,6 +61,7 @@ void UnipiGPIOPin::setup() {
     this->parent_->status_set_warning("non-existent pin");
     return;
   }
+  setbuf(this->fp_, nullptr);
 }
 
 std::string UnipiGPIOPin::dump_summary() const {
@@ -72,11 +73,11 @@ bool UnipiGPIOPin::digital_read() {
     return false;
   }
 
-  int val;
   rewind(this->fp_);
-  fscanf(this->fp_, "%d\n", &val);
+  int val = getc(this->fp_);
+  fflush(this->fp_);
 
-  return val != 0;
+  return val != '0';
 }
 
 void UnipiGPIOPin::digital_write(bool value) {
