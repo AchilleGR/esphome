@@ -15,7 +15,7 @@ CONFIG_SCHEMA = (
             cv.Required(CONF_PIN): pins.gpio_input_pin_schema,
         }
     )
-    .extend(cv.polling_component_schema("100ms"))
+    .extend(cv.polling_component_schema("40ms"))
 )
 
 
