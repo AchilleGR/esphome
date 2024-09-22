@@ -2,6 +2,7 @@
 
 #include "esphome/core/component.h"
 #include "esphome/core/hal.h"
+#include "esphome/core/helpers.h"
 #include <cstdio>
 
 namespace esphome {
@@ -16,9 +17,8 @@ class UnipiComponent : public Component {
   float get_setup_priority() const override { return setup_priority::IO; }
 };
 
-class UnipiGPIOPin : public GPIOPin {
+class UnipiGPIOPin : public GPIOPin, public Parented<UnipiComponent> {
  public:
-  void set_parent(UnipiComponent *parent) { this->parent_ = parent; }
   void set_slot(uint8_t slot) { this->slot_ = slot; }
   void set_pin(uint8_t pin) { this->pin_ = pin; }
   void set_mode(IoMode mode) { this->mode_ = mode; }
@@ -30,8 +30,6 @@ class UnipiGPIOPin : public GPIOPin {
   void digital_write(bool value) override;
 
  protected:
-  UnipiComponent *parent_;
-
   uint8_t slot_;
   uint8_t pin_;
 
