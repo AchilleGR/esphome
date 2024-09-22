@@ -2,12 +2,11 @@ from esphome import pins
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.const import (
-    CONF_ALLOW_OTHER_USES,
     CONF_ID,
     CONF_INPUT,
     CONF_MODE,
     CONF_NUMBER,
-    CONF_OUTPUT,
+    CONF_OUTPUT
 )
 
 CONF_UNIPI = "unipi"
@@ -73,13 +72,7 @@ def mode_expr(mode):
         return IoMode.DI
 
 
-def unipi_pin_final_validate_config(pin_config, parent_config):
-    # PinRegistry checks for uniqueness of CONF_NUMBER, but for us uniqueness
-    # is (CONF_SLOT, CONF_NUMBER), i.e. 1.5 and 2.5 may both exist.
-    pin_config[CONF_ALLOW_OTHER_USES] = True
-
-
-@pins.PIN_SCHEMA_REGISTRY.register(CONF_UNIPI, Unipi_PIN_SCHEMA, unipi_pin_final_validate_config)
+@pins.PIN_SCHEMA_REGISTRY.register(CONF_UNIPI, Unipi_PIN_SCHEMA)
 async def unipi_pin_to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     parent = await cg.get_variable(config[CONF_UNIPI])
