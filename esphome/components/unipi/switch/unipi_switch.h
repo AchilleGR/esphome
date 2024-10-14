@@ -17,13 +17,12 @@ class UnipiSwitch : public switch_::Switch, public PollingComponent {
   float get_setup_priority() const override;
   void update() override;
 
-  void set_pin(uint8_t slot, uint8_t pin) { this->slot_ = slot; this->pin_ = pin; }
+  void set_pin(std::string pin) { this->pin_ = pin; }
 
  protected:
   void write_state(bool state) override;
 
-  uint8_t slot_;
-  uint8_t pin_;
+  std::string pin_;
 
   FILE *fp_;
 };
