@@ -13,7 +13,9 @@ UnipiSwitch = unipi_ns.class_("UnipiSwitch", switch.Switch, cg.PollingComponent)
 def validate_pin(pin_str):
     pin_str = str(pin_str)
     if not pin_str.startswith("DO") and not pin_str.startswith("RO"):
-        raise cv.Invalid("Switch operates only on digital outs (DO), relays (RO)")
+        raise cv.Invalid(
+            "Switch operates only on digital outputs (DO), relay outputs (RO)"
+        )
     return pin_str
 
 
