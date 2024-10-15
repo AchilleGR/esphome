@@ -18,7 +18,7 @@ void UnipiSwitch::setup() {
   ESP_LOGD(TAG, "Opening... %s", filename.c_str());
   this->fp_ = fopen(filename.c_str(), "r+");
   if (!this->fp_) {
-    ESP_LOGE(TAG, "Could not open %s", filename.c_str());
+    ESP_LOGE(TAG, "Could not open %s: %s", filename.c_str(), strerror(errno));
     this->mark_failed();
     return;
   }
@@ -30,7 +30,7 @@ void UnipiSwitch::setup() {
 }
 
 void UnipiSwitch::dump_config() {
-  LOG_SWITCH("", "Unipi", this);
+  LOG_SWITCH("", "Unipi Switch", this);
 
   if (!this->is_failed()) {
     ESP_LOGCONFIG(TAG, "  Pin: %s", this->pin_.c_str());
@@ -50,7 +50,7 @@ void UnipiSwitch::update() {
 void UnipiSwitch::write_state(bool state) {
   rewind(this->fp_);
   if (fwrite(state ? "1\n" : "0\n", 1, 2, this->fp_) != 2) {
-    ESP_LOGE(TAG, "Could not write to pin %s", this->pin_.c_str());
+    ESP_LOGE(TAG, "Could not write to pin %s: %s", this->pin_.c_str(), strerror(errno));
     // XXX: warning?
   }
   fflush(this->fp_);
