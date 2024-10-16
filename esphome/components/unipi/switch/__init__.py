@@ -26,7 +26,7 @@ CONFIG_SCHEMA = (
             cv.Required(CONF_PIN): validate_pin,
         }
     )
-    .extend(cv.polling_component_schema("40ms"))
+    .extend(cv.polling_component_schema("500ms"))
 )
 
 
