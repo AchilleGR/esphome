@@ -14,6 +14,7 @@ from esphome.const import (
     CONF_STOP_ACTION,
     CONF_UPDATE_INTERVAL,
 )
+from esphome.types import ConfigType
 
 CONF_OPEN_SENSOR = "open_sensor"
 CONF_CLOSE_SENSOR = "close_sensor"
