@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cstdint>
 
 #include "esphome/components/modbus_controller/modbus_controller.h"
@@ -51,6 +52,30 @@ TEST(OfflineRetryCadence, SurvivesCounterWraparound) {
     counter++;
   }
   EXPECT_EQ(due_count, 10);
+}
+
+// An outage can last through many complete counter wraps. Reanchoring each issued probe keeps
+// every window intact, including when the period does not divide 65536.
+TEST(OfflineRetryCadence, RepeatedWindowsDoNotShortenAcrossFullCounterWraps) {
+  constexpr std::array<uint16_t, 8> skips{0, 1, 11, 59, 119, 239, 1499, 65535};
+  for (uint16_t skip : skips) {
+    const uint32_t period = static_cast<uint32_t>(skip) + 1;
+    for (uint16_t initial : {uint16_t{0}, uint16_t{32760}, uint16_t{65530}}) {
+      uint16_t anchor = initial;
+      uint16_t counter = initial;
+      uint32_t previous = 0;
+      uint32_t probes = 0;
+      for (uint32_t tick = 1; tick <= 131072; tick++, counter++) {
+        if (!offline_retry_due(counter, anchor, skip))
+          continue;
+        EXPECT_EQ(tick - previous, period) << "skip=" << skip << " initial=" << initial;
+        previous = tick;
+        probes++;
+        anchor = static_cast<uint16_t>(counter + 1);
+      }
+      EXPECT_EQ(probes, 131072 / period);
+    }
+  }
 }
 
 }  // namespace esphome::modbus_controller::testing

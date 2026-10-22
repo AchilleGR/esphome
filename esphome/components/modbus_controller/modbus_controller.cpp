@@ -324,6 +324,8 @@ void ModbusController::update() {
     // Offline probing follows the offline cadence alone; regular every-update polling resumes once
     // the device is back online.
     if (offline_retry_due(this->update_counter_, this->module_offline_at_, this->offline_skip_updates_)) {
+      // Start the next window here, before a 16-bit elapsed age can wrap during a long outage.
+      this->module_offline_at_ = static_cast<uint16_t>(this->update_counter_ + 1);
       ESP_LOGV(TAG, "Module offline - retrying");
       this->cmd_non_responses_ = 0;  // allow the probe through can_send()
       for (auto &poll : this->polling_devices_) {

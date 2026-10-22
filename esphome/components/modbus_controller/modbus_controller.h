@@ -479,8 +479,8 @@ class ESPDEPRECATED(
 #pragma GCC diagnostic pop
 
 /// Whether an offline probe is due this update cycle: every offline_skip_updates + 1 cycles,
-/// anchored at the cycle the device went offline. Pure so the cadence (including update_counter
-/// wraparound) can be unit tested; used by ModbusController::update().
+/// anchored at the start of the current probe window. Reanchor after each probe so a long outage
+/// cannot wrap the elapsed cycle count and shorten a window. Used by ModbusController::update().
 inline bool offline_retry_due(uint16_t update_counter, uint16_t module_offline_at, uint16_t offline_skip_updates) {
   return static_cast<uint16_t>(update_counter + 1 - module_offline_at) % (offline_skip_updates + 1) == 0;
 }
@@ -589,7 +589,7 @@ class ModbusController final : public PollingComponent {
   void sweep_completed_one_shots_();
   /// if module didn't respond the last command
   bool module_offline_{false};
-  /// update_counter_ value at which the module went offline (for offline_skip_updates timing)
+  /// Start of the current offline probe window, reanchored after each probe.
   uint16_t module_offline_at_{0};
   /// counts update() cycles; drives the offline-retry cadence
   uint16_t update_counter_{0};
