@@ -59,6 +59,7 @@ class NoResponseProbeHub : public ModbusClientHub {
   void force_send_next() {
     ModbusDeviceCommand *cmd = this->select_next_ready_();
     ASSERT_NE(cmd, nullptr) << "no READY entry to send";
+    this->record_transmission_(cmd->priority());
     cmd->state = FrameState::WAITING;
     this->waiting_for_response_ = true;
   }
@@ -2436,4 +2437,60 @@ TEST(ModbusClientHubPriority, ReadModifyWritesRankAsWrites) {
   EXPECT_EQ(next->priority(), CommandPriority::WRITE);  // 0x16 wins selection over the queued read
   EXPECT_EQ(next->frame.pdu()[0], 0x16);
 }
+TEST(ModbusClientHubWriteBurst, RetriesYieldToPendingReadAtConfiguredLimit) {
+  NoResponseProbeHub hub;
+  hub.set_max_write_burst(3);
+  RetryingDevice writer(&hub, 1, true);
+  RetryingDevice reader(&hub, 2, false);
+  ASSERT_TRUE(reader.read_coils(0, 1));
+  ASSERT_TRUE(writer.write_single_coil(0, true));
+
+  for (int i = 0; i < 3; i++) {
+    ASSERT_NE(hub.next_ready(), nullptr);
+    EXPECT_EQ(hub.next_ready()->priority(), CommandPriority::WRITE);
+    hub.force_send_next();
+    hub.timeout_waiting();
+  }
+  ASSERT_NE(hub.next_ready(), nullptr);
+  EXPECT_EQ(hub.next_ready()->frame.address(), 2);
+  hub.force_send_next();
+  const uint8_t response[] = {0x01, 0x01, 0x00};
+  hub.receive_frame_for_test(2, response);
+  ASSERT_NE(hub.next_ready(), nullptr);
+  EXPECT_EQ(hub.next_ready()->priority(), CommandPriority::WRITE);
+}
+
+TEST(ModbusClientHubWriteBurst, DisabledLimitPreservesWriteFirstScheduling) {
+  for (bool explicit_zero : {false, true}) {
+    NoResponseProbeHub hub;
+    if (explicit_zero)
+      hub.set_max_write_burst(0);
+    RetryingDevice writer(&hub, 1, true);
+    RetryingDevice reader(&hub, 2, false);
+    ASSERT_TRUE(reader.read_coils(0, 1));
+    ASSERT_TRUE(writer.write_single_coil(0, true));
+    for (int i = 0; i < 300; i++) {
+      ASSERT_NE(hub.next_ready(), nullptr);
+      EXPECT_EQ(hub.next_ready()->priority(), CommandPriority::WRITE);
+      hub.force_send_next();
+      hub.timeout_waiting();
+    }
+  }
+}
+
+TEST(ModbusClientHubWriteBurst, CounterSaturatesAndServesALateContinuousRead) {
+  NoResponseProbeHub hub;
+  hub.set_max_write_burst(3);
+  RetryingDevice writer(&hub, 1, true);
+  RetryingDevice reader(&hub, 2, false);
+  ASSERT_TRUE(writer.write_single_coil(0, true));
+  for (int i = 0; i < 1024; i++) {
+    hub.force_send_next();
+    hub.timeout_waiting();
+  }
+  ASSERT_TRUE(reader.read_coils(0, 1, {.continuous = true}));
+  ASSERT_NE(hub.next_ready(), nullptr);
+  EXPECT_EQ(hub.next_ready()->priority(), CommandPriority::CONTINUOUS);
+}
+
 }  // namespace esphome::modbus::testing

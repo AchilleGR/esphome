@@ -250,6 +250,11 @@ class ModbusClientHub : public Modbus {
   // Config arrives in milliseconds; stored internally in microseconds like all other timing.
   void set_send_wait_time(uint16_t time_in_ms) { this->send_wait_time_us_ = time_in_ms * 1000UL; }
   void set_turnaround_time(uint16_t time_in_ms) { this->turnaround_delay_us_ = time_in_ms * 1000UL; }
+  /// Limit consecutive write transmissions while a read is ready. Zero preserves write-first scheduling.
+  void set_max_write_burst(uint8_t max_write_burst) {
+    this->max_write_burst_ = max_write_burst;
+    this->consecutive_writes_ = 0;
+  }
   bool tx_buffer_empty();
   bool tx_blocked() override;
   /// Queue a request. True = accepted: it resolves in exactly one terminal callback (a broadcast,
@@ -282,6 +287,8 @@ class ModbusClientHub : public Modbus {
   void sweep_();
   // The selection function: best READY entry (ordered by priority; FIFO by seq within each group), or nullptr.
   ModbusDeviceCommand *select_next_ready_();
+  /// Count actual transmissions, including retries, without wrapping the burst counter.
+  void record_transmission_(CommandPriority priority);
   // Locate the single entry waiting for a response (WAITING/INTERRUPTED/WAITING_RETIRED/INTERRUPTED_RETIRED).
   ModbusDeviceCommand *find_waiting_();
   // End the wait for a response on send-wait timeout (the loop() watchdog body); see FrameState.
@@ -301,6 +308,8 @@ class ModbusClientHub : public Modbus {
 
   // Plain append-order container; ordering lives in select_next_ready_(), lifecycle in FrameState.
   std::deque<ModbusDeviceCommand> tx_buffer_;
+  uint8_t max_write_burst_{0};
+  uint8_t consecutive_writes_{0};
 };
 
 // Transaction status: std::nullopt on success, otherwise a Modbus exception code

@@ -50,3 +50,29 @@ def test_hub_time_rejects_values_the_hub_would_truncate() -> None:
     # The setters take 16-bit milliseconds: 70 s would silently become 4464 ms.
     with pytest.raises(cv.Invalid):
         _HUB_TIME_PERIOD("70s")
+
+
+@pytest.mark.parametrize("burst", [0, 1, 3, 255])
+def test_client_accepts_write_burst_limit(burst: int) -> None:
+    config = modbus.CONFIG_SCHEMA(
+        {"role": "client", "uart_id": "bus", "max_write_burst": burst}
+    )
+    assert config["max_write_burst"] == burst
+
+
+def test_write_burst_limit_defaults_to_legacy_scheduling() -> None:
+    config = modbus.CONFIG_SCHEMA({"role": "client", "uart_id": "bus"})
+    assert config["max_write_burst"] == 0
+
+
+@pytest.mark.parametrize("burst", [-1, 256])
+def test_write_burst_limit_rejects_out_of_range_values(burst: int) -> None:
+    with pytest.raises(cv.Invalid):
+        modbus.CONFIG_SCHEMA(
+            {"role": "client", "uart_id": "bus", "max_write_burst": burst}
+        )
+
+
+def test_server_rejects_client_write_burst_limit() -> None:
+    with pytest.raises(cv.Invalid):
+        modbus.CONFIG_SCHEMA({"role": "server", "uart_id": "bus", "max_write_burst": 3})

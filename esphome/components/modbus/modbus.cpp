@@ -837,6 +837,7 @@ void ModbusClientHub::send_next_frame_() {
     return;
   }
 
+  this->record_transmission_(cmd->priority());
   cmd->sent();
   if (cmd->fire_and_forget()) {
     // A broadcast (address 0) is never answered (Modbus 4.1), so it is fire-and-forget: on_sent above
@@ -932,6 +933,8 @@ ModbusDeviceCommand *ModbusClientHub::select_next_ready_() {
   const auto age = [now](const ModbusDeviceCommand &cmd) -> uint16_t { return now - cmd.seq; };
   const auto older = [&age](const ModbusDeviceCommand &a, const ModbusDeviceCommand &b) { return age(a) > age(b); };
   ModbusDeviceCommand *best = nullptr;
+  ModbusDeviceCommand *best_read = nullptr;
+  const bool read_due = this->max_write_burst_ != 0 && this->consecutive_writes_ >= this->max_write_burst_;
   for (auto &cmd : this->tx_buffer_) {
     if (cmd.state != FrameState::READY)
       continue;
@@ -939,8 +942,23 @@ ModbusDeviceCommand *ModbusClientHub::select_next_ready_() {
         (cmd.priority() == best->priority() && older(cmd, *best))) {
       best = &cmd;
     }
+    if (read_due && cmd.priority() != CommandPriority::WRITE &&
+        (best_read == nullptr || cmd.priority() > best_read->priority() ||
+         (cmd.priority() == best_read->priority() && older(cmd, *best_read)))) {
+      best_read = &cmd;
+    }
   }
-  return best;
+  return best_read != nullptr ? best_read : best;
+}
+
+void ModbusClientHub::record_transmission_(CommandPriority priority) {
+  if (this->max_write_burst_ == 0)
+    return;
+  if (priority != CommandPriority::WRITE) {
+    this->consecutive_writes_ = 0;
+  } else if (this->consecutive_writes_ < this->max_write_burst_) {
+    this->consecutive_writes_++;
+  }
 }
 
 bool ModbusDeviceCommand::sent() {

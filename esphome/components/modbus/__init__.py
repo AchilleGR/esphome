@@ -49,6 +49,7 @@ CONF_EXPECT_BROADCAST_WRITE_RESPONSE = "expect_broadcast_write_response"
 CONF_MODBUS_ID = "modbus_id"
 CONF_SEND_WAIT_TIME = "send_wait_time"
 CONF_TURNAROUND_TIME = "turnaround_time"
+CONF_MAX_WRITE_BURST = "max_write_burst"
 
 MODBUS_ROLES = ["client", "server"]
 
@@ -281,6 +282,7 @@ CONFIG_SCHEMA = cv.typed_schema(
                 cv.Optional(CONF_FLOW_CONTROL_PIN): pins.gpio_output_pin_schema,
                 cv.Optional(CONF_SEND_WAIT_TIME, default="2000ms"): _HUB_TIME_PERIOD,
                 cv.Optional(CONF_TURNAROUND_TIME, default="600ms"): _HUB_TIME_PERIOD,
+                cv.Optional(CONF_MAX_WRITE_BURST, default=0): cv.uint8_t,
             }
         )
         .extend(cv.COMPONENT_SCHEMA)
@@ -313,6 +315,8 @@ async def to_code(config: ConfigType) -> None:
     if config[CONF_ROLE] == "client":
         cg.add(var.set_send_wait_time(config[CONF_SEND_WAIT_TIME]))
         cg.add(var.set_turnaround_time(config[CONF_TURNAROUND_TIME]))
+        if burst := config[CONF_MAX_WRITE_BURST]:
+            cg.add(var.set_max_write_burst(burst))
 
 
 # The broadcast address (0) is delivered to every device and is never answered (Modbus 4.1),
